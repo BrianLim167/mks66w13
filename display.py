@@ -152,51 +152,152 @@ class PPMGrid(object):
         for c in range(matrix.cols//2):
             self.draw_line( *matrix[c*2][:3], *matrix[c*2+1][:3], color )
 
-    def draw_polygons( self, prop, view, ambient_light, light_sources, mode="flat" ):
+    def draw_polygons( self, prop, view, ambient_light, light_sources, mode="gourand" ):
+        neighbors = {}
+        for i in range(prop.polygons.cols):
+            neighbors[i] = []
         for c in range(prop.polygons.cols//3):
+            if not mode == "flat":
+                neighbors[c].append(c+1)
+                neighbors[c].append(c+2)
+                neighbors[c+1].append(c+2)
+                neighbors[c+1].append(c)
+                neighbors[c+2].append(c)
+                neighbors[c+2].append(c+1)
             normal = Vector.normal(*prop.polygons[c*3:c*3+3])
             if ( Vector.dot(normal, view) > 0 ):
                 draw_outline = False
+                color = PPMGrid.DEFAULT_COLOR[:]
                 if ( draw_outline ):
                     self.draw_line( *matrix[c*3][:3], *matrix[c*3+1][:3], color )
                     self.draw_line( *matrix[c*3+1][:3], *matrix[c*3+2][:3], color )
                     self.draw_line( *matrix[c*3+2][:3], *matrix[c*3][:3], color )
-                color = prop.get_lighting(c, view, ambient_light, light_sources)
-                self.scanline_convert( *prop.polygons[c*3:c*3+3], color )
+                self.scanline_convert( prop, c, neighbors, view, ambient_light, light_sources, mode )
 
-    def scanline_convert( self, p0, p1, p2, color ):
-        polygon = [p0, p1, p2]
+    def scanline_convert( self, prop, c, neighbors, view, ambient_light, light_sources, mode ):
+        polygon = prop.polygons[c*3:c*3+3]
+        [p0,p1,p2] = polygon
+        if mode == "flat":
+            normal = Vector.normal(p0,p1,p2).norm()
+            color = prop.get_lighting(normal, view, ambient_light, light_sources)
+        else:
+            surface_normals = []
+            vertex_normals = []
+            for i in range(c*3,c*3+3):
+                print(surface_normals)
+                surface_normals.append([])
+                for j in range(len(neighbors[i])//2):
+                    surface_normals[-1].append(Vector.normal(prop.polygons[i],
+                                                             prop.polygons[neighbors[i][j*2]],
+                                                             prop.polygons[neighbors[i][j*2+1]]).norm())
+                vertex_normals.append(Vector([0,0,0]))
+                for j in range(len(surface_normals[-1])):
+##                    print( str(vertex_normals[-1]) + " & & " + str(surface_normals[-1][j]) )
+##                    print( str(i) + str(j) + str(surface_normals) )
+                    if False or len(surface_normals[-1][j]) == 3:
+                        vertex_normals[-1] += surface_normals[-1][j][:]
+                if len(surface_normals[-1]) != 0:
+                    vertex_normals[-1] *= 1 / len(surface_normals[-1]) 
+            vertex_normals = {tuple(p0):vertex_normals[0],
+                              tuple(p1):vertex_normals[1],
+                              tuple(p2):vertex_normals[2]}
         polygon.sort(key = lambda x: x[1])
         bot,mid,top = polygon[0],polygon[1],polygon[2]
+        if mode == "gourand":
+            color_bot = prop.get_lighting(vertex_normals[tuple(bot)], view, ambient_light, light_sources)
+            color_mid = prop.get_lighting(vertex_normals[tuple(mid)], view, ambient_light, light_sources)
+            color_top = prop.get_lighting(vertex_normals[tuple(top)], view, ambient_light, light_sources)
+##            self.draw_line(*p0, *p1, color0, color1, "gourand")
+##            self.draw_line(*p1, *p2, color1, color2, "gourand")
+##            self.draw_line(*p2, *p0, color2, color0, "gourand")
         y = int(bot[1])
         x0,x1 = bot[0],bot[0]
         z0,z1 = bot[2],bot[2]
+        if mode == "gourand":
+            r0,r1 = color_bot[0],color_bot[0]
+            g0,g1 = color_bot[1],color_bot[1]
+            b0,b1 = color_bot[2],color_bot[2]
         cy0 = int(top[1]) - y * 1.0
         cy1 = int(mid[1]) - y * 1.0
         dx0 = (top[0] - bot[0])/cy0 if cy0 != 0 else 0
         dx1 = (mid[0] - bot[0])/cy1 if cy1 != 0 else 0
         dz0 = (top[2] - bot[2])/cy0 if cy0 != 0 else 0
         dz1 = (mid[2] - bot[2])/cy1 if cy1 != 0 else 0
+        if mode == "gourand":
+            dr0 = (color_top[0] - color_bot[0])/cy0 if cy0 != 0 else 0
+            dr1 = (color_mid[0] - color_bot[0])/cy1 if cy1 != 0 else 0
+            dg0 = (color_top[1] - color_bot[1])/cy0 if cy0 != 0 else 0
+            dg1 = (color_mid[1] - color_bot[1])/cy1 if cy1 != 0 else 0
+            db0 = (color_top[2] - color_bot[2])/cy0 if cy0 != 0 else 0
+            db1 = (color_mid[2] - color_bot[2])/cy1 if cy1 != 0 else 0
         while ( y < int(mid[1]) ):
-            self.draw_line(int(x0),y,z0,int(x1),y,z1,color)
+            if mode == "flat":
+                self.draw_line(int(x0),y,z0,int(x1),y,z1,color)
+            elif mode == "gourand":
+                dz = (z1 - z0) / (x1 - x0) if x1 != x0 else 0
+                dr = (r1 - r0) / (x1 - x0) if x1 != x0 else 0
+                dg = (g1 - g0) / (x1 - x0) if x1 != x0 else 0
+                db = (b1 - b0) / (x1 - x0) if x1 != x0 else 0
+                for x in range(int(x0), int(x1)+1):
+                    z,r,g,b = z0,r0,g0,b0
+                    self.plot([int(r),int(g),int(b)], x, y, z)
+                    z += dz
+                    r += dr
+                    g += dg
+                    b += db
             y += 1
             x0 += dx0
             x1 += dx1
             z0 += dz0
             z1 += dz1
+            if mode == "gourand":
+                r0 += dr0
+                r1 += dr1
+                g0 += dg0
+                g1 += dg1
+                b0 += db0
+                b1 += db1
         y = int(mid[1])
         x1 = mid[0]
         z1 = mid[2]
+        if mode == "gourand":
+            r1 = color_mid[0]
+            g1 = color_mid[1]
+            b1 = color_mid[2]
         cy1 = int(top[1]) - int(mid[1]) * 1.0
         dx1 = (top[0] - mid[0])/cy1 if cy1 != 0 else 0
         dz1 = (top[2] - mid[2])/cy1 if cy1 != 0 else 0
+        if mode == "gourand":
+            dr1 = (color_top[0] - color_mid[0])/cy1 if cy1 != 0 else 0
+            dg1 = (color_top[1] - color_mid[1])/cy1 if cy1 != 0 else 0
+            db1 = (color_top[2] - color_mid[2])/cy1 if cy1 != 0 else 0
         while ( y <= int(top[1]) ):
-            self.draw_line(int(x0),y,z0,int(x1),y,z1,color)
+            if mode == "flat":
+                self.draw_line(int(x0),y,z0,int(x1),y,z1,color)
+            elif mode == "gourand":
+                dz = (z1 - z0) / (x1 - x0) if x1 != x0 else 0
+                dr = (r1 - r0) / (x1 - x0) if x1 != x0 else 0
+                dg = (g1 - g0) / (x1 - x0) if x1 != x0 else 0
+                db = (b1 - b0) / (x1 - x0) if x1 != x0 else 0
+                for x in range(int(x0), int(x1)+1):
+                    z,r,g,b = z0,r0,g0,b0
+                    self.plot([int(r),int(g),int(b)], x, y, z)
+                    z += dz
+                    r += dr
+                    g += dg
+                    b += db
             y += 1
             x0 += dx0
             x1 += dx1
             z0 += dz0
             z1 += dz1
+            if mode == "gourand":
+                r0 += dr0
+                r1 += dr1
+                g0 += dg0
+                g1 += dg1
+                b0 += db0
+                b1 += db1
 
     def parse_file( self, fname, color ):
         fopen = open(fname,'r')

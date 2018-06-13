@@ -12,9 +12,7 @@ class Prop(object):
         p = Prop( self.polygons, self.reflection )
         return p
 
-    def get_lighting(self, polygon_number, view, ambient_light, light_sources):
-        points = self.polygons[polygon_number*3:polygon_number*3+3]
-        normal = Vector.normal(*points).norm()
+    def get_lighting(self, normal, view, ambient_light, light_sources):
         view = view.norm()
 
         ambient_color = Light.ambient_color(ambient_light, self.reflection[0])

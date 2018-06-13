@@ -57,6 +57,17 @@ class Vector(object):
         self.ary[i] = val
         return self.ary[i]
 
+    def __str__(self):
+        s = '<'
+        for i in range(len(self)):
+            s += ("     "+str(self[i]))[:10][-5:]
+            s += ' '
+        s += '>'
+        return s
+
+    def __repr__(self):
+        return str(self)
+
     def append(self, val):
         self.ary.append(val)
 
@@ -66,7 +77,7 @@ class Vector(object):
         for i in range(len(self)):
             square_sum += self[i] ** 2
         for i in range(len(self)):
-            v.append( self[i] / (square_sum ** 0.5) )
+            v.append( self[i] / (square_sum ** 0.5) ) if square_sum != 0 else 0
         return v
 
     @staticmethod
