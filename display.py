@@ -152,7 +152,7 @@ class PPMGrid(object):
         for c in range(matrix.cols//2):
             self.draw_line( *matrix[c*2][:3], *matrix[c*2+1][:3], color )
 
-    def draw_polygons( self, prop, view, ambient_light, light_sources ):
+    def draw_polygons( self, prop, view, ambient_light, light_sources, mode="flat" ):
         for c in range(prop.polygons.cols//3):
             normal = Vector.normal(*prop.polygons[c*3:c*3+3])
             if ( Vector.dot(normal, view) > 0 ):

@@ -1,6 +1,5 @@
 push
-rotate y 180
-move 0 0 0
+rotate y 40
 
 //BODY
 push

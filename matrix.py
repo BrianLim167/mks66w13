@@ -190,13 +190,14 @@ class Matrix(object):
         step = 1/count
         t = 90
         m = Matrix(0,4)
-        while ( t <= 270 ):
+        while ( t <= 270 - 180*step ):
             a = math.radians(t)
             m.add_point(cx + r*math.cos(a), cy + r*math.sin(a), cz)
             if ( edge ):
                 a = math.radians(a+180*step)
                 m.add_point(cx + r*math.cos(a), cy + r*math.sin(a), cz)
             t += 180*step
+        m.add_point(cx, cy-r, cz)
         if ( not edge ):
             m.add_point(cx, cy - r, cz)
         m *= Matrix.rotz(270)
@@ -278,36 +279,51 @@ class Matrix(object):
         self.add_point(x,b,c)
         self.add_point(x,b,z)
 
-    def add_sphere( self, cx, cy, cz, r, poly=True, count=14 ):
+    def add_sphere( self, cx, cy, cz, r, poly=True, count=25 ):
         m = Matrix.sphere(cx,cy,cz, r, poly, count)
         self.append(m)
 
     @staticmethod
-    def sphere( cx, cy, cz, r, poly=True, count=10 ):
+    def sphere( cx, cy, cz, r, poly=True, count=25 ):
         step = 1/count
         m = Matrix(0,4)
+        rots = []
+        brots = []
         t = 0
-        while ( t <= 1 ):
-            rota = Matrix.rotx(360 * t       )
-            rotb = Matrix.rotx(360 * (t+step))
-            rotc = Matrix.rotx(360 * (t-step))
+        while ( t <= 0.5 ):
+            rots.append(Matrix.rotx(360 * t))
+            t += step
+        t = 1.0
+        while ( t > 0.5 ):
+            brots.append(Matrix.rotx(360 * t))
+            t -= step
+        for i in range(len(brots)):
+            rots.append(brots[len(brots)-1-i])
+        for i in range(count):
             if ( poly ):
                 a,b,c = Matrix(0,4),Matrix(0,4),Matrix(0,4)
                 a.add_semicircle(0,0,0, r, False, count)
                 b.add_semicircle(0,0,0, r, False, count)
                 c.add_semicircle(0,0,0, r, False, count)
-                a *= rota
-                b *= rotb
-                c *= rotc
+                a *= rots[i]
+                b *= rots[(i+1)%count]
+                c *= rots[(i-1)%count]
                 for i in range(count):
-                    if ( i != 0 ):
+                    if ( i != 0 and i != count-1 ):
                         m.append(a[i])
                         m.append(a[(i+1)%len(a)])
                         m.append(b[i])
-                    if ( i != count-1 ):
                         m.append(a[i])
                         m.append(c[(i+1)%len(c)])
                         m.append(a[(i+1)%len(a)])
+                    if ( i == 0 ):
+                        m.append(a[i])
+                        m.append(c[(i+1)%len(c)])
+                        m.append(a[(i+1)%len(a)])
+                    if ( i == count-1 ):
+                        m.append(a[i])
+                        m.append(a[(i+1)%len(a)])
+                        m.append(b[i])
             else:
                 m.add_semicircle(0,0,0, r, True, count)
 ##            m *= rotb
