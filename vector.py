@@ -47,6 +47,12 @@ class Vector(object):
         self = self - other
         return self
 
+    def __eq__(self,other):
+        return self.ary == other.ary
+
+    def __lt__(self,other):
+        return self.ary < other.ary
+
     def __len__(self):
         return len(self.ary)
 

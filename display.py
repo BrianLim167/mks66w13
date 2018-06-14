@@ -9,6 +9,11 @@ def is_number(s):
         return True
     except:
         return False
+    
+def approx(v):
+    for i in range(len(v)):
+        v[i] = round(v[i],2)
+    return v
 
 class PPMGrid(object):
 
@@ -59,7 +64,8 @@ class PPMGrid(object):
     def plot( self, color, x, y, z ):
         (x,y) = (int(x),int(y))
         newy = PPMGrid.YRES - 1 - y
-        z = int(z*1000000/1000000)
+        z = round(z,5)
+##        z = int(z*1000000/1000000)
         if ( x >= 0 and x < PPMGrid.XRES and newy >= 0 and newy < PPMGrid.YRES
              and z >= self.z_buffer[newy][x] ):
             self[newy][x] = color[:]
@@ -152,22 +158,23 @@ class PPMGrid(object):
         for c in range(matrix.cols//2):
             self.draw_line( *matrix[c*2][:3], *matrix[c*2+1][:3], color )
 
-    def draw_polygons( self, prop, view, ambient_light, light_sources, mode="gourand" ):
+    def draw_polygons( self, prop, view, ambient_light, light_sources, mode="gouraud" ):
+        matrix = prop.polygons
         neighbors = {}
         for i in range(prop.polygons.cols):
-            neighbors[i] = []
+            neighbors[tuple(approx(matrix[i]))] = []
         for c in range(prop.polygons.cols//3):
             if not mode == "flat":
-                neighbors[c].append(c+1)
-                neighbors[c].append(c+2)
-                neighbors[c+1].append(c+2)
-                neighbors[c+1].append(c)
-                neighbors[c+2].append(c)
-                neighbors[c+2].append(c+1)
+                neighbors[tuple(approx(matrix[c*3]))].append(c*3+1)
+                neighbors[tuple(approx(matrix[c*3]))].append(c*3+2)
+                neighbors[tuple(approx(matrix[c*3+1]))].append(c*3+2)
+                neighbors[tuple(approx(matrix[c*3+1]))].append(c*3)
+                neighbors[tuple(approx(matrix[c*3+2]))].append(c*3)
+                neighbors[tuple(approx(matrix[c*3+2]))].append(c*3+1)
             normal = Vector.normal(*prop.polygons[c*3:c*3+3])
             if ( Vector.dot(normal, view) > 0 ):
                 draw_outline = False
-                color = PPMGrid.DEFAULT_COLOR[:]
+                color = [255,0,255]
                 if ( draw_outline ):
                     self.draw_line( *matrix[c*3][:3], *matrix[c*3+1][:3], color )
                     self.draw_line( *matrix[c*3+1][:3], *matrix[c*3+2][:3], color )
@@ -184,120 +191,230 @@ class PPMGrid(object):
             surface_normals = []
             vertex_normals = []
             for i in range(c*3,c*3+3):
-                print(surface_normals)
+##                print(neighbors)
                 surface_normals.append([])
-                for j in range(len(neighbors[i])//2):
+                for j in range(len(neighbors[tuple(prop.polygons[i])])//2):
                     surface_normals[-1].append(Vector.normal(prop.polygons[i],
-                                                             prop.polygons[neighbors[i][j*2]],
-                                                             prop.polygons[neighbors[i][j*2+1]]).norm())
+                                                             prop.polygons[neighbors[tuple(approx(prop.polygons[i]))][j*2]],
+                                                             prop.polygons[neighbors[tuple(approx(prop.polygons[i]))][j*2+1]]).norm())
+##                    print(len(neighbors[i]))
                 vertex_normals.append(Vector([0,0,0]))
                 for j in range(len(surface_normals[-1])):
 ##                    print( str(vertex_normals[-1]) + " & & " + str(surface_normals[-1][j]) )
 ##                    print( str(i) + str(j) + str(surface_normals) )
-                    if False or len(surface_normals[-1][j]) == 3:
-                        vertex_normals[-1] += surface_normals[-1][j][:]
+                    vertex_normals[-1] += surface_normals[-1][j]
                 if len(surface_normals[-1]) != 0:
-                    vertex_normals[-1] *= 1 / len(surface_normals[-1]) 
-            vertex_normals = {tuple(p0):vertex_normals[0],
-                              tuple(p1):vertex_normals[1],
-                              tuple(p2):vertex_normals[2]}
+                    vertex_normals[-1] = vertex_normals[-1].norm()
+##                print(surface_normals[-1])
+##            print(len(neighbors))
+##            print()
+            ys = []
+            for i in range(len(polygon)):
+                ys.append(polygon[i][1])
+            vertex_normals = [x for y,x in sorted(zip(ys,vertex_normals), key=lambda pair: pair[0])]
         polygon.sort(key = lambda x: x[1])
         bot,mid,top = polygon[0],polygon[1],polygon[2]
-        if mode == "gourand":
-            color_bot = prop.get_lighting(vertex_normals[tuple(bot)], view, ambient_light, light_sources)
-            color_mid = prop.get_lighting(vertex_normals[tuple(mid)], view, ambient_light, light_sources)
-            color_top = prop.get_lighting(vertex_normals[tuple(top)], view, ambient_light, light_sources)
-##            self.draw_line(*p0, *p1, color0, color1, "gourand")
-##            self.draw_line(*p1, *p2, color1, color2, "gourand")
-##            self.draw_line(*p2, *p0, color2, color0, "gourand")
+        if mode == "gouraud":
+            if c%2==0:
+                color_bot = prop.get_lighting(vertex_normals[0], view, ambient_light, light_sources)
+                color_mid = prop.get_lighting(vertex_normals[1], view, ambient_light, light_sources)
+                color_top = prop.get_lighting(vertex_normals[2], view, ambient_light, light_sources)
+            else:
+                color_bot = prop.get_lighting(vertex_normals[0], view, ambient_light, light_sources)
+                color_mid = prop.get_lighting(vertex_normals[1], view, ambient_light, light_sources)
+                color_top = prop.get_lighting(vertex_normals[2], view, ambient_light, light_sources)
+##            print([color_bot,color_mid,color_top])
         y = int(bot[1])
         x0,x1 = bot[0],bot[0]
         z0,z1 = bot[2],bot[2]
-        if mode == "gourand":
+        if mode == "gouraud":
             r0,r1 = color_bot[0],color_bot[0]
             g0,g1 = color_bot[1],color_bot[1]
             b0,b1 = color_bot[2],color_bot[2]
+        elif mode == "phong":
+            vx0, vx1 = vertex_normals[0][0],vertex_normals[0][0]
+            vy0, vy1 = vertex_normals[0][1],vertex_normals[0][1]
+            vz0, vz1 = vertex_normals[0][2],vertex_normals[0][2]
         cy0 = int(top[1]) - y * 1.0
         cy1 = int(mid[1]) - y * 1.0
         dx0 = (top[0] - bot[0])/cy0 if cy0 != 0 else 0
         dx1 = (mid[0] - bot[0])/cy1 if cy1 != 0 else 0
         dz0 = (top[2] - bot[2])/cy0 if cy0 != 0 else 0
         dz1 = (mid[2] - bot[2])/cy1 if cy1 != 0 else 0
-        if mode == "gourand":
+        if mode == "gouraud":
             dr0 = (color_top[0] - color_bot[0])/cy0 if cy0 != 0 else 0
             dr1 = (color_mid[0] - color_bot[0])/cy1 if cy1 != 0 else 0
             dg0 = (color_top[1] - color_bot[1])/cy0 if cy0 != 0 else 0
             dg1 = (color_mid[1] - color_bot[1])/cy1 if cy1 != 0 else 0
             db0 = (color_top[2] - color_bot[2])/cy0 if cy0 != 0 else 0
             db1 = (color_mid[2] - color_bot[2])/cy1 if cy1 != 0 else 0
+        elif mode == "phong":
+            dvx0 = (vertex_normals[2][0] - vertex_normals[0][0])/cy0 if cy0 != 0 else 0
+            dvx1 = (vertex_normals[1][0] - vertex_normals[0][0])/cy1 if cy1 != 0 else 0
+            dvy0 = (vertex_normals[2][1] - vertex_normals[0][1])/cy0 if cy0 != 0 else 0
+            dvy1 = (vertex_normals[1][1] - vertex_normals[0][1])/cy1 if cy1 != 0 else 0
+            dvz0 = (vertex_normals[2][2] - vertex_normals[0][2])/cy0 if cy0 != 0 else 0
+            dvz1 = (vertex_normals[1][2] - vertex_normals[0][2])/cy1 if cy1 != 0 else 0
         while ( y < int(mid[1]) ):
             if mode == "flat":
                 self.draw_line(int(x0),y,z0,int(x1),y,z1,color)
-            elif mode == "gourand":
+            elif mode == "gouraud":
                 dz = (z1 - z0) / (x1 - x0) if x1 != x0 else 0
                 dr = (r1 - r0) / (x1 - x0) if x1 != x0 else 0
                 dg = (g1 - g0) / (x1 - x0) if x1 != x0 else 0
                 db = (b1 - b0) / (x1 - x0) if x1 != x0 else 0
-                for x in range(int(x0), int(x1)+1):
+                if ( x1 > x0 ):
                     z,r,g,b = z0,r0,g0,b0
-                    self.plot([int(r),int(g),int(b)], x, y, z)
-                    z += dz
-                    r += dr
-                    g += dg
-                    b += db
+                    for x in range(int(x0), int(x1)+1):
+                        self.plot([int(r),int(g),int(b)], x, y, z)
+                        z += dz
+                        r += dr
+                        g += dg
+                        b += db
+                else:
+                    z,r,g,b = z1,r1,g1,b1
+                    for x in range(int(x1), int(x0)+1):
+                        self.plot([int(r),int(g),int(b)], x, y, z)
+                        z += dz
+                        r += dr
+                        g += dg
+                        b += db
+            elif mode == "phong":
+                dz = (z1 - z0) / (x1 - x0) if x1 != x0 else 0
+                dvx = (vx1 - vx0) / (x1 - x0) if x1 != x0 else 0
+                dvy = (vy1 - vy0) / (x1 - x0) if x1 != x0 else 0
+                dvz = (vz1 - vz0) / (x1 - x0) if x1 != x0 else 0
+                if ( x1 > x0 ):
+                    z,vx,vy,vz = z0,vx0,vy0,vz0
+                    for x in range(int(x0), int(x1)+1):
+                        self.plot(prop.get_lighting(Vector([vx,vy,vz]).norm(), view, ambient_light, light_sources),
+                            x, y, z)
+                        z += dz
+                        vx += dvx
+                        vy += dvy
+                        vz += dvz
+                else:
+                    z,vx,vy,vz = z1,vx1,vy1,vz1
+                    for x in range(int(x1), int(x0)+1):
+                        self.plot(prop.get_lighting(Vector([vx,vy,vz]).norm(), view, ambient_light, light_sources),
+                            x, y, z)
+                        z += dz
+                        vx += dvx
+                        vy += dvy
+                        vz += dvz
+##                if r < 0 or g < 0 or b < 0:
+##                    print(str([r,g,b]))
+##                    [r,g,b] = [255,0,255]
             y += 1
             x0 += dx0
             x1 += dx1
             z0 += dz0
             z1 += dz1
-            if mode == "gourand":
+            if mode == "gouraud":
                 r0 += dr0
                 r1 += dr1
                 g0 += dg0
                 g1 += dg1
                 b0 += db0
                 b1 += db1
+            elif mode == "phong":
+                vx0 += dvx0
+                vx1 += dvx1
+                vy0 += dvy0
+                vy1 += dvy1
+                vz0 += dvz0
+                vz1 += dvz1
         y = int(mid[1])
         x1 = mid[0]
         z1 = mid[2]
-        if mode == "gourand":
+        if mode == "gouraud":
             r1 = color_mid[0]
             g1 = color_mid[1]
             b1 = color_mid[2]
+        elif mode == "phong":
+            vx1 = vertex_normals[1][0]
+            vy1 = vertex_normals[1][1]
+            vz1 = vertex_normals[1][2]
         cy1 = int(top[1]) - int(mid[1]) * 1.0
         dx1 = (top[0] - mid[0])/cy1 if cy1 != 0 else 0
         dz1 = (top[2] - mid[2])/cy1 if cy1 != 0 else 0
-        if mode == "gourand":
+        if mode == "gouraud":
             dr1 = (color_top[0] - color_mid[0])/cy1 if cy1 != 0 else 0
             dg1 = (color_top[1] - color_mid[1])/cy1 if cy1 != 0 else 0
             db1 = (color_top[2] - color_mid[2])/cy1 if cy1 != 0 else 0
+        elif mode == "phong":
+            dvx1 = (vertex_normals[2][0] - vertex_normals[1][0])/cy1 if cy1 != 0 else 0
+            dvy1 = (vertex_normals[2][1] - vertex_normals[1][1])/cy1 if cy1 != 0 else 0
+            dvz1 = (vertex_normals[2][2] - vertex_normals[1][2])/cy1 if cy1 != 0 else 0
         while ( y <= int(top[1]) ):
             if mode == "flat":
                 self.draw_line(int(x0),y,z0,int(x1),y,z1,color)
-            elif mode == "gourand":
+            elif mode == "gouraud":
                 dz = (z1 - z0) / (x1 - x0) if x1 != x0 else 0
                 dr = (r1 - r0) / (x1 - x0) if x1 != x0 else 0
                 dg = (g1 - g0) / (x1 - x0) if x1 != x0 else 0
                 db = (b1 - b0) / (x1 - x0) if x1 != x0 else 0
-                for x in range(int(x0), int(x1)+1):
+                if ( x1 > x0 ):
                     z,r,g,b = z0,r0,g0,b0
-                    self.plot([int(r),int(g),int(b)], x, y, z)
-                    z += dz
-                    r += dr
-                    g += dg
-                    b += db
+                    for x in range(int(x0), int(x1)+1):
+                        self.plot([int(r),int(g),int(b)], x, y, z)
+                        z += dz
+                        r += dr
+                        g += dg
+                        b += db
+                else:
+                    z,r,g,b = z1,r1,g1,b1
+                    for x in range(int(x1), int(x0)+1):
+                        self.plot([int(r),int(g),int(b)], x, y, z)
+                        z += dz
+                        r += dr
+                        g += dg
+                        b += db
+            elif mode == "phong":
+                dz = (z1 - z0) / (x1 - x0) if x1 != x0 else 0
+                dvx = (vx1 - vx0) / (x1 - x0) if x1 != x0 else 0
+                dvy = (vy1 - vy0) / (x1 - x0) if x1 != x0 else 0
+                dvz = (vz1 - vz0) / (x1 - x0) if x1 != x0 else 0
+                if ( x1 > x0 ):
+                    z,vx,vy,vz = z0,vx0,vy0,vz0
+                    for x in range(int(x0), int(x1)+1):
+                        self.plot(prop.get_lighting(Vector([vx,vy,vz]).norm(), view, ambient_light, light_sources),
+                            x, y, z)
+                        z += dz
+                        vx += dvx
+                        vy += dvy
+                        vz += dvz
+                else:
+                    z,vx,vy,vz = z1,vx1,vy1,vz1
+                    for x in range(int(x1), int(x0)+1):
+                        self.plot(prop.get_lighting(Vector([vx,vy,vz]).norm(), view, ambient_light, light_sources),
+                            x, y, z)
+                        z += dz
+                        vx += dvx
+                        vy += dvy
+                        vz += dvz
+##                if r < 0 or g < 0 or b < 0:
+##                    print(str([r,g,b]))
+##                    [r,g,b] = [255,0,255]
             y += 1
             x0 += dx0
             x1 += dx1
             z0 += dz0
             z1 += dz1
-            if mode == "gourand":
+            if mode == "gouraud":
                 r0 += dr0
                 r1 += dr1
                 g0 += dg0
                 g1 += dg1
                 b0 += db0
                 b1 += db1
+            elif mode == "phong":
+                vx0 += dvx0
+                vx1 += dvx1
+                vy0 += dvy0
+                vy1 += dvy1
+                vz0 += dvz0
+                vz1 += dvz1
 
     def parse_file( self, fname, color ):
         fopen = open(fname,'r')

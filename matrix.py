@@ -187,19 +187,32 @@ class Matrix(object):
         self.append(m)
         
     def add_semicircle( self, cx, cy, cz, r, edge=True, count=1000 ):
-        step = 1/count
-        t = 90
+        step = 180/count
         m = Matrix(0,4)
-        while ( t <= 270 - 180*step ):
+        m.add_point(cx, cy+r, cz)
+        t = 90+step
+        while ( t <= 180 ):
             a = math.radians(t)
             m.add_point(cx + r*math.cos(a), cy + r*math.sin(a), cz)
             if ( edge ):
-                a = math.radians(a+180*step)
+                a = math.radians(t+step)
                 m.add_point(cx + r*math.cos(a), cy + r*math.sin(a), cz)
-            t += 180*step
-        m.add_point(cx, cy-r, cz)
-        if ( not edge ):
-            m.add_point(cx, cy - r, cz)
+            t += step
+        t = 270-step
+        temp = []
+        temp.append((cx, cy-r, cz),)
+        while ( t >= 180 ):
+            a = math.radians(t)
+            temp.append((cx + r*math.cos(a), cy + r*math.sin(a), cz),)
+            if ( edge ):
+                a = math.radians(t+step)
+                temp.add_point((cx + r*math.cos(a), cy + r*math.sin(a), cz),)
+            t -= step
+        for i in range(len(temp)):
+            m.add_point(*temp[len(temp)-1-i])
+##        m.add_point(cx, cy-r, cz)
+##        if ( not edge ):
+##            m.add_point(cx, cy - r, cz)
         m *= Matrix.rotz(270)
         self.append(m)
 
@@ -279,12 +292,12 @@ class Matrix(object):
         self.add_point(x,b,c)
         self.add_point(x,b,z)
 
-    def add_sphere( self, cx, cy, cz, r, poly=True, count=25 ):
+    def add_sphere( self, cx, cy, cz, r, poly=True, count=15 ):
         m = Matrix.sphere(cx,cy,cz, r, poly, count)
         self.append(m)
 
     @staticmethod
-    def sphere( cx, cy, cz, r, poly=True, count=25 ):
+    def sphere( cx, cy, cz, r, poly=True, count=15 ):
         step = 1/count
         m = Matrix(0,4)
         rots = []

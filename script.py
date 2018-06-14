@@ -62,9 +62,12 @@ class Script(object):
         This function runs an mdl script
         """
         script = Script()
+        mode = "flat"
         view = Vector([0,0,1])
-        ambient_light = [100,100,100]
-        light_sources = [ Light( Vector([1,1,1]).norm(), [180,20,20] ) ]
+        ambient_light = [20,20,20]
+        light_sources = [ Light( Vector([1,1,1]).norm(), [220,20,20] ),
+                          Light( Vector([-1,1.5,1]).norm(), [10, 240, 40] ),
+                          Light( Vector([-1.5,-1,1]).norm(), [20, 20, 200] ) ]
         r = [ [1,1,1],
               [1,1,1],
               [1,1,1] ]
@@ -166,15 +169,18 @@ class Script(object):
                         p.add_sphere(*args)
                         p = coordinate_system[-1]*p
 ##                        print(coordinate_system[-1])
-                        screen.draw_polygons(Prop(p,r), view, ambient_light, light_sources)
+                        screen.draw_polygons(Prop(p,r), view, ambient_light, light_sources, mode)
                     elif ( op == "torus" ):
                         p.add_torus(*args)
                         p = coordinate_system[-1]*p
-                        screen.draw_polygons(Prop(p,r), view, ambient_light, light_sources)
+                        screen.draw_polygons(Prop(p,r), view, ambient_light, light_sources, mode)
                     elif ( op == "push" ):
                         coordinate_system.append(coordinate_system[-1].copy())
                     elif ( op == "pop" ):
                         coordinate_system.pop()
+                    elif ( op == "shading" ):
+                        mode = cmd["shade_type"]
+                        
                 
                 if script.is_animated:
                     screen.save_extension("anim/" + script.basename + ("%03d" % int(frame)) + ".png")
