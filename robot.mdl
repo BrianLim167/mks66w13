@@ -1,3 +1,5 @@
+shading phong
+
 push
 rotate y 40
 

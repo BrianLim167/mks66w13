@@ -292,12 +292,12 @@ class Matrix(object):
         self.add_point(x,b,c)
         self.add_point(x,b,z)
 
-    def add_sphere( self, cx, cy, cz, r, poly=True, count=15 ):
+    def add_sphere( self, cx, cy, cz, r, poly=True, count=25 ):
         m = Matrix.sphere(cx,cy,cz, r, poly, count)
         self.append(m)
 
     @staticmethod
-    def sphere( cx, cy, cz, r, poly=True, count=15 ):
+    def sphere( cx, cy, cz, r, poly=True, count=25 ):
         step = 1/count
         m = Matrix(0,4)
         rots = []

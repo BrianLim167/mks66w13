@@ -64,10 +64,13 @@ class Script(object):
         script = Script()
         mode = "flat"
         view = Vector([0,0,1])
-        ambient_light = [20,20,20]
-        light_sources = [ Light( Vector([1,1,1]).norm(), [220,20,20] ),
-                          Light( Vector([-1,1.5,1]).norm(), [10, 240, 40] ),
-                          Light( Vector([-1.5,-1,1]).norm(), [20, 20, 200] ) ]
+        ambient_light = [0,0,0]
+        light_sources = [ Light(Vector([1,1,1]).norm(),     [220,20,20]),
+                          Light(Vector([-1,1.5,1]).norm(),  [10,240,40]),
+                          Light(Vector([-1.5,-1,1]).norm(), [20,20,200]) ]
+##light ez 1 1 1 220 20 20
+##light pz -1 1.5 1 10 240 40
+##light lemon -1.5 -1 1 20 20 200
         r = [ [1,1,1],
               [1,1,1],
               [1,1,1] ]
@@ -180,6 +183,21 @@ class Script(object):
                         coordinate_system.pop()
                     elif ( op == "shading" ):
                         mode = cmd["shade_type"]
+##                    elif ( op == "ambient" ):
+##                        print(symbols)
+##                        print(cmd)
+##                        ambient_light = args[:]
+##                    elif ( op == "constants" ):
+####                        pass
+##                        print(symbols)
+##                        print(cmd)
+##                        r = [ [symbols[cmd["constants"]][1]["red"][0],symbols[cmd["constants"]][1]["green"][0],symbols[cmd["constants"]][1]["blue"][0]],
+##                              [symbols[cmd["constants"]][1]["red"][1],symbols[cmd["constants"]][1]["green"][1],symbols[cmd["constants"]][1]["blue"][1]],
+##                              [symbols[cmd["constants"]][1]["red"][2],symbols[cmd["constants"]][1]["green"][2],symbols[cmd["constants"]][1]["blue"][2]] ][:]
+##                        r = [ symbols[cmd["constants"]][1]["red"],
+##                              symbols[cmd["constants"]][1]["green"],
+##                              symbols[cmd["constants"]][1]["blue"], ]
+                        
                         
                 
                 if script.is_animated:

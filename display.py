@@ -11,8 +11,8 @@ def is_number(s):
         return False
     
 def approx(v):
-    for i in range(len(v)):
-        v[i] = round(v[i],2)
+##    for i in range(len(v)):
+##        v[i] = round(v[i],5)
     return v
 
 class PPMGrid(object):
@@ -202,7 +202,8 @@ class PPMGrid(object):
                 for j in range(len(surface_normals[-1])):
 ##                    print( str(vertex_normals[-1]) + " & & " + str(surface_normals[-1][j]) )
 ##                    print( str(i) + str(j) + str(surface_normals) )
-                    vertex_normals[-1] += surface_normals[-1][j]
+                    if len(surface_normals[-1][j]) == 3:
+                        vertex_normals[-1] += surface_normals[-1][j]
                 if len(surface_normals[-1]) != 0:
                     vertex_normals[-1] = vertex_normals[-1].norm()
 ##                print(surface_normals[-1])
